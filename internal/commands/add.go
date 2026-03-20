@@ -65,7 +65,7 @@ func parseAddArgs(args []string) (title, content, filePath string, tags []string
 			cPos = i
 		} else if arg == "-t" {
 			tPos = i
-		} else if arg == "--file" {
+		} else if arg == "--file" || arg == "--import" {
 			filePos = i
 		}
 	}
