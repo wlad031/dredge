@@ -14,6 +14,10 @@ import (
 	"github.com/DeprecatedLuar/dredge/internal/session"
 )
 
+const githubRepo = "DeprecatedLuar/dredge"
+
+var version = "dev"
+
 var (
 	debugMode  bool
 	luckMode   bool
@@ -190,6 +194,14 @@ func main() {
 					return commands.HandlePasswd()
 				},
 			},
+			{
+				Name:    "update",
+				Aliases: []string{"up"},
+				Usage:   "Update dredge to the latest version",
+				Action: func(c *cli.Context) error {
+					return commands.HandleUpdate(version, githubRepo)
+				},
+			},
 		},
 		Before: func(c *cli.Context) error {
 			// Set debug mode for crypto package
@@ -229,7 +241,7 @@ func main() {
 
 			// Ensure a git repo is connected (skip for init/help — those don't need it)
 			sub := c.Args().First()
-			if !devMode && sub != "init" && sub != "help" && sub != "h" {
+			if !devMode && sub != "init" && sub != "help" && sub != "h" && sub != "update" && sub != "up" {
 				if err := commands.EnsureInitialized(); err != nil {
 					return err
 				}
