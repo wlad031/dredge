@@ -296,24 +296,39 @@ func IsInitialized(dredgeDir string) bool {
 // uncommitted changes in items/ or commits not yet pushed to remote.
 // Silent on all errors (returns false).
 func HasUnpushedChanges(dredgeDir string) bool {
+	return CountUnpushedChanges(dredgeDir) > 0
+}
+
+// CountUnpushedChanges returns the number of changed items (added, modified,
+// deleted) in items/ that have not been pushed. Silent on all errors (returns 0).
+func CountUnpushedChanges(dredgeDir string) int {
 	if !isGitRepo(dredgeDir) {
-		return false
+		return 0
 	}
 
-	// Check for uncommitted changes in items/ (tracked and untracked)
+	count := 0
+
+	// Count uncommitted changes in items/
 	output, err := runGitCommand(dredgeDir, "status", "--short", "--", "items/")
-	if err == nil && strings.TrimSpace(output) != "" {
-		return true
-	}
-
-	// Check for commits ahead of remote
-	output, err = runGitCommand(dredgeDir, "rev-list", "@{upstream}..HEAD", "--count")
 	if err == nil {
-		count := strings.TrimSpace(output)
-		return count != "" && count != "0"
+		for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+			if strings.TrimSpace(line) != "" {
+				count++
+			}
+		}
 	}
 
-	return false
+	// Count items changed in unpushed commits
+	output, err = runGitCommand(dredgeDir, "diff", "@{upstream}..HEAD", "--name-only", "--", "items/")
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+			if strings.TrimSpace(line) != "" {
+				count++
+			}
+		}
+	}
+
+	return count
 }
 
 // isGitRepo checks if directory is a git repository

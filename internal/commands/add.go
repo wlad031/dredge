@@ -25,8 +25,8 @@ func warnIfUnpushed() {
 	if err != nil {
 		return
 	}
-	if git.HasUnpushedChanges(dredgeDir) {
-		ui.PrintUnpushedWarning()
+	if count := git.CountUnpushedChanges(dredgeDir); count > 4 {
+		ui.PrintUnpushedWarning(count)
 	}
 }
 
