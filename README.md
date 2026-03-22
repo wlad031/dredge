@@ -107,15 +107,47 @@ mv dredge ~/.local/bin/
 </details>
 
 
-Git sync requires the [gh CLI](https://cli.github.com/) authenticated. (For now. I'll work on that before v1.0)
+Git sync uses plain `git` and works with any remote (GitHub/GitLab/Gitea/etc).
+
+### Acceptable remotes for `dredge init`
+
+`dredge init` accepts an optional git remote. If you omit it, dredge initializes a local-only git repo (no remote).
+
+Accepted remote formats:
+
+```bash
+# GitHub shorthand (expanded to https://github.com/<owner>/<repo>.git)
+dredge init owner/repo
+
+# HTTPS
+dredge init https://github.com/owner/repo.git
+dredge init https://gitlab.com/group/repo.git
+
+# SSH (scp-like)
+dredge init git@github.com:owner/repo.git
+dredge init git@gitlab.com:group/repo.git
+
+# SSH URL
+dredge init ssh://git@github.com/owner/repo.git
+
+# Local path remote (advanced)
+dredge init /srv/git/dredge-vault.git
+```
+
+Notes:
+
+- Dredge does not create remote repositories for you.
+- If `origin` is not configured, `dredge push`/`pull`/`sync` will error with guidance.
+- If you already have a git remote set, `dredge init` will not overwrite it.
 
 ---
 
 <h2><img height="32" src="other/assets/fish/dredge-perch.webp"/> Quick start</h2>
 
 ```bash
-# Initialize with a GitHub repo (creates it if it doesn't exist)
-dredge init yourusername/vault
+# Initialize with an existing git remote
+dredge init yourusername/vault   # GitHub shorthand
+# or: dredge init git@gitlab.com:you/vault.git
 
 # Add your first item
 dredge add "OpenAI Key" -c "sk-..." -t keys api #opens the editor without -c flag
