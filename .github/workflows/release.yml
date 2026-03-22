@@ -19,6 +19,7 @@ jobs:
       with:
         go-version-file: go.mod
 
+
     - name: Build binaries
       id: build
       run: |
