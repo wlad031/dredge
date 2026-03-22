@@ -22,31 +22,29 @@ jobs:
     - name: Build binaries
       id: build
       run: |
+        # Build targets: add or remove "os/arch" entries as needed
+        TARGETS="
+          linux/amd64
+          linux/arm64
+          darwin/amd64
+          darwin/arm64
+        "
+
         VERSION=${GITHUB_REF#refs/tags/}
         REPO=$(grep 'githubRepo' cmd/dredge/main.go | grep -oP '"[^"]+"' | tr -d '"')
         BINARY_NAME=$(basename ${REPO})
-        VERSION_VAR="main.version"
         MAIN_PACKAGE="./cmd/${BINARY_NAME}"
-        LDFLAGS="-X ${VERSION_VAR}=${VERSION}"
+        LDFLAGS="-X main.version=${VERSION}"
+        FILES=""
 
-        # ============================================================
-        # BUILD TARGETS: Uncomment/comment platforms as needed
-        # ============================================================
-
-        # Linux (default - always included)
-        GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o ${BINARY_NAME}_linux_amd64 ${MAIN_PACKAGE}
-        GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o ${BINARY_NAME}_linux_arm64 ${MAIN_PACKAGE}
-        FILES="${BINARY_NAME}_linux_amd64,${BINARY_NAME}_linux_arm64"
-
-        # macOS (uncomment to build for Darwin)
-        # GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o ${BINARY_NAME}_darwin_amd64 ${MAIN_PACKAGE}
-        # GOOS=darwin GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o ${BINARY_NAME}_darwin_arm64 ${MAIN_PACKAGE}
-        # FILES="${FILES},${BINARY_NAME}_darwin_amd64,${BINARY_NAME}_darwin_arm64"
-
-        # Windows (uncomment to build for Windows)
-        # GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o ${BINARY_NAME}_windows_amd64.exe ${MAIN_PACKAGE}
-        # GOOS=windows GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o ${BINARY_NAME}_windows_arm64.exe ${MAIN_PACKAGE}
-        # FILES="${FILES},${BINARY_NAME}_windows_amd64.exe,${BINARY_NAME}_windows_arm64.exe"
+        for TARGET in $TARGETS; do
+          GOOS=${TARGET%/*}
+          GOARCH=${TARGET#*/}
+          OUTPUT="${BINARY_NAME}_${GOOS}_${GOARCH}"
+          [ "$GOOS" = "windows" ] && OUTPUT="${OUTPUT}.exe"
+          GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="${LDFLAGS}" -o $OUTPUT $MAIN_PACKAGE
+          FILES="${FILES:+${FILES},}${OUTPUT}"
+        done
 
         echo "files=${FILES}" >> $GITHUB_OUTPUT
 
