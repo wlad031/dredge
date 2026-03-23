@@ -349,6 +349,8 @@ dredge init /srv/git/dredge-vault.git
 
 <h2><img height="32" src="other/assets/fish/dredge-jellyfish-aurora.webp"/> Why</h2>
 
+<img src="other/assets/dredge-logo.webp" alt="dredge logo" align="right" width="200"/>
+
 > *"I am a collector — of many things; art and artifacts, treasures and truths... and curios that occupy the periphery of desire."* — The Collector
 
 The mental overhead of saving something and not knowing where to find it when you need it.
@@ -379,3 +381,9 @@ Big thanks to you guys who contributed to dredge:
   </td>
 </tr>
 </table>
+
+---
+
+<div align="center">
+Made with <img src="other/assets/fish/dredge-skate-defaced.webp" height="200" style="vertical-align:middle"/> by Luar
+</div>
