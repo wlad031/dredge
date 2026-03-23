@@ -168,15 +168,22 @@ dredge sync          # pull + push
 
 > *"I can't imagine what's down there in the deep."* — The Lighthouse Keeper
 
-Dredge stores everything as encrypted files in `~/.local/share/dredge/`. That directory is also a git repository — so `dredge push` just commits and pushes it. Each item is a standalone encrypted blob with a random 3-character ID. No filenames, no readable metadata from the outside.
+Okay so to summarize:
+
+I settled on using two main crypto technologies Argon2id and of course AES-256 more specifically the GCM variant. 
+
+Argon2id because it is THE reccomendation from RFC 9106 and the 2015 PHC winner. That's it
+The GCM variant of AES because it makes all encrypted data impossible to tamper with due to fingerprinting. That's it too
+
+For now I'm storing everything as encrypted files in `~/.local/share/dredge/`. That directory is also a git repository (at leat for now). So `dredge push` commits and pushes everything for backup stuff. Each item is a standalone encrypted blob with a random 3-character ID. I decided that no filenames should be exposed so even if someone can see your stuff they have no idea what thy are looking at.
 
 ### The encryption pipeline
 
 ```
 Your password
-  + 16-byte random salt  ←  stored in .dredge-key
+  + 16-byte random salt  ← the salt is stored in .dredge-key
   → Argon2id (64 MB memory · 4 threads · 1 iteration)
-  → 32-byte master key
+  → 32-byte master key (salt + password = the real key)
 
 Master key + item content (TOML: title, tags, content)
   → AES-256-GCM with a fresh random 12-byte nonce per operation
@@ -184,47 +191,43 @@ Master key + item content (TOML: title, tags, content)
   → written to disk as items/xKP  (random ID, no extension)
 ```
 
-One key per vault, derived fresh from your password each session. Every item uses the same key, each with its own random nonce — encrypting the same content twice produces completely different ciphertext.
+So your entire vault shares the same derived key (this means if you lose your key you lose your data, please don't lose your key). Every item uses the same key, each with its own random nonce. If you encrypt the same content twice produces completely different ciphertext basically.
 
 ### What lives where
 
 ```
-~/.local/share/dredge/          ← the vault (also a git repo)
+~/.local/share/dredge/          ← the vault (git repo)
 ├── .git/
 ├── .gitignore                  ← excludes .spawned/ and links.json
-├── .dredge-key                 ← salt + encrypted verification string  [git-tracked]
+├── .dredge-key                 ← salt + encrypted verification string  
 ├── items/
-│   ├── xKP                     ← encrypted item                        [git-tracked]
-│   ├── mNq                     ← encrypted item                        [git-tracked]
+│   ├── xKP                     ← encrypted item                       
+│   ├── mNq                     ← encrypted item                
 │   └── ...
-├── .spawned/                   ← plaintext copies of linked items      [git-ignored]
-└── links.json                  ← symlink manifest                      [git-ignored]
+├── .spawned/                   ← plaintext copies of linked items   
+└── links.json                  ← symlink manifest
 ```
 
-Only encrypted files and `.dredge-key` ever leave your machine via git. Plaintext never touches the remote.
+So all your encrypted files and `.dredge-key` are stored on the git repo, all the plain text files (the one you decided to make readable by the system) will never be tracked. so do whatever you want wit it. 
 
 ### Session model
 
-After your first command in a terminal, the derived 32-byte key is cached at:
+After your first command in a terminal, the derived 32-byte key is cached at `$XDG_RUNTIME_DIR/dredge/$PPID/.key` (root access only)
 
-```
-$XDG_RUNTIME_DIR/dredge/$PPID/.key
-```
-
-Subsequent commands in the same terminal use the cached key — no password prompt. Each terminal gets its own isolated directory via parent PID. Close the terminal, the key is gone.
+All the following dredge commands in the SAME terminal use the cached key. Which means you won't be password prompted anymore. Each terminal gets its own isolated directory based on the parent PID. So the key is evaporated from disk once the teminal dies.
 
 <details>
 <summary>Deeper technical details</summary>
 
 <br>
 
-**Key derivation — Argon2id:** RFC 9106 recommended parameters (64 MB memory, 4 threads, 1 iteration). The salt in `.dredge-key` is not secret — it just ensures brute-forcing your password is expensive even with the file. A strong password is your real protection.
+**Key derivation — Argon2id:** RFC 9106 recommended parameters (64 MB memory, 4 threads, 1 iteration). The salt in `.dredge-key` is not supposed to be a secret it just ensures brute-forcing your password is _very_ expensive even with the file. Your password is what keeps you safe so you know what to do.
 
-**Cipher — AES-256-GCM:** Authenticated encryption. Provides both confidentiality and integrity — a tampered ciphertext won't silently decrypt to garbage, decryption will fail and error.
+**Cipher — AES-256-GCM:** Basically fingerprints every encryption. You get both confidentiality and integrity. Tampering ciphertext won't decrypt to garbage, decryption will fail and scream for help.
 
-**Password verification:** `.dredge-key` contains the string `dredge-vault-v1` encrypted with your master key. On each new session, dredge decrypts this to verify your password before touching any items — fast-failing in ~100ms rather than discovering a wrong password mid-operation.
+**Password verification:** `.dredge-key` contains the string `dredge-vault-v1` encrypted with your master key. On each new session, dredge decrypts this to verify if the password is correct. So if you dont get `dredge-vault-v1` out of it the password is wrong, so it fails in ~100ms rather than discovering a wrong password mid-operation.
 
-**What's cached:** The session file stores the derived 32-byte key, not the password. So even if someone reads `.key` during an active session, they cannot recover your password from it.
+**What's cached:** The session file stores the derived 32-byte key (password + salt), not the password itself (I'm not that stupid). So even if someone reads `.key` during an active session, they cannot recover your password from it.
 
 </details>
 
@@ -234,7 +237,7 @@ Subsequent commands in the same terminal use the cached key — no password prom
 
 > *"Better to come back with a small catch than to not come back at all."* — The Fishmonger
 
-### Threat model
+### Threat model (I made this section with AI but its right)
 
 **Someone clones your private git repo:**
 They get encrypted blobs and `.dredge-key`. The salt is not secret — its purpose is to make precomputation attacks impractical. Without your password, the items are opaque binary data. Argon2id makes offline brute-force expensive. Use a strong password.
