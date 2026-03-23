@@ -54,7 +54,7 @@ go install github.com/DeprecatedLuar/dredge/cmd/dredge@latest
 <h2><img height="44" src="other/assets/fish/dredge-blackmouth.webp"/> The cool features you've never seen before</h2>
 
 - **Encrypted storage** — Clone the repo and get absolute cryptic gibberish. You can't even tell what's in the repo without the password. (I used AES-256-GCM + Argon2id)
-- **Instant search** — I made a custom fuzzy search algorithm because I'm lazy and want the right entry among 300 others in milissecond without having to think about it.
+- **Instant search** — I made a custom fuzzy search algorithm because I'm lazy and want the right entry among 300 others in millisecond without having to think about it.
 - **Store anything** — notes, scripts, dotfiles, images, zip archives. If it's a file and it exists it can be stored in dredge.
 - **Live file linking** — Cool feature, symlink any item to a system path so you can read and edit directly or through dredge. Any changes sync both ways with the repo.
 - **Git-backed** — private repo you own. So just `git clone` it and you have your data.
