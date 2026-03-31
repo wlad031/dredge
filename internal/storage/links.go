@@ -320,6 +320,28 @@ func GetOrphanedLinkIDs() []string {
 	return orphaned
 }
 
+// RepairBrokenSymlinks recreates symlinks that are in the manifest but missing on disk
+func RepairBrokenSymlinks() {
+	manifest, err := LoadManifest()
+	if err != nil {
+		return
+	}
+
+	for id, entry := range manifest {
+		if _, err := os.Lstat(entry.Path); !os.IsNotExist(err) {
+			continue // symlink exists (or other error), skip
+		}
+		spawnedPath, err := GetSpawnedPath(id)
+		if err != nil {
+			continue
+		}
+		if _, err := os.Stat(spawnedPath); err != nil {
+			continue // spawned file also missing, skip (orphan cleanup handles this)
+		}
+		os.Symlink(spawnedPath, entry.Path)
+	}
+}
+
 // GetOrphanedSpawnedFiles returns IDs of spawned files not tracked in manifest
 func GetOrphanedSpawnedFiles() []string {
 	manifest, err := LoadManifest()

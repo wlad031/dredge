@@ -26,8 +26,8 @@ func HandleLink(args []string) error {
 		}
 	}
 
-	if len(positionalArgs) < 2 {
-		return fmt.Errorf("usage: dredge link <id|number> <path> [--force|-f] [-p|--parents]")
+	if len(positionalArgs) < 1 {
+		return fmt.Errorf("usage: dredge link <id|number> [path] [--force|-f] [-p|--parents]")
 	}
 
 	// Resolve ID from first argument (supports numbered access)
@@ -41,7 +41,33 @@ func HandleLink(args []string) error {
 	}
 
 	id := ids[0]
-	targetPath := positionalArgs[1]
+
+	// Get key and item early — needed for path fallback and display
+	key, err := crypto.GetKeyWithVerification()
+	if err != nil {
+		return err
+	}
+
+	item, err := storage.ReadItem(id, key)
+	if err != nil {
+		return fmt.Errorf("failed to read item: %w", err)
+	}
+
+	var targetPath string
+	if len(positionalArgs) >= 2 {
+		targetPath = positionalArgs[1]
+	} else {
+		// Default to pwd/<filename> or pwd/<id>
+		name := item.Filename
+		if name == "" {
+			name = id
+		}
+		pwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get working directory: %w", err)
+		}
+		targetPath = filepath.Join(pwd, name)
+	}
 
 	// Validate target path
 	if !filepath.IsAbs(targetPath) {
@@ -70,17 +96,6 @@ func HandleLink(args []string) error {
 	// Perform link operation
 	if err := storage.Link(id, targetPath, force); err != nil {
 		return err
-	}
-
-	// Get item for display
-	key, err := crypto.GetKeyWithVerification()
-	if err != nil {
-		return err
-	}
-
-	item, err := storage.ReadItem(id, key)
-	if err != nil {
-		return fmt.Errorf("link created but failed to read item for display: %w", err)
 	}
 
 	fmt.Printf("Linked [%s] %s -> %s\n", id, item.Title, targetPath)
